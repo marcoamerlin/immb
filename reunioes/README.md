@@ -93,4 +93,4 @@ npm run demo:admin        # (em outro terminal) libera admin@teste.com como admi
 npm test                  # testa as regras de segurança
 ```
 
-Com `projectId: 'demo-immb'` em `config.js`, o app usa os emuladores e mostra uma faixa "Modo de teste". Como nenhum e-mail é enviado de verdade, os links aparecem na própria tela.
+Abrindo pelo `localhost`, o app usa automaticamente os emuladores (projeto `demo-immb`) e mostra uma faixa "Modo de teste". Como nenhum e-mail é enviado de verdade, os links aparecem na própria tela.

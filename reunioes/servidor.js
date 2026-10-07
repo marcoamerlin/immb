@@ -8,9 +8,9 @@ import {
   addDoc, collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, initializeFirestore, onSnapshot, orderBy,
   persistentLocalCache, persistentMultipleTabManager, query, setDoc, updateDoc, where,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { firebaseConfig } from './config.js';
+import { firebaseConfig, MODO_TESTE } from './config.js';
 
-export const MODO_DEMO = firebaseConfig.projectId.startsWith('demo-');
+export const MODO_DEMO = MODO_TESTE;
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

@@ -1,7 +1,7 @@
 {
-  "name": "Reuniões IMMB",
+  "name": "Reuniões no Lar · IMMB",
   "short_name": "Reuniões",
-  "description": "Organização de reuniões da Igreja Messiânica Mundial do Brasil: pauta, presença, ata e encaminhamentos.",
+  "description": "Registro das reuniões no lar da Igreja Messiânica Mundial do Brasil: participantes e Johreis ministrados.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",

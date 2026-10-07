@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "reunioes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "autorUid", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reunioes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "unidadeId", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

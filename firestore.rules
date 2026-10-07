@@ -1,0 +1,120 @@
+rules_version = '2';
+
+// Acesso por convite: o admin cadastra o e-mail da pessoa em /convites/{email}.
+// Ela entra pelo link enviado ao e-mail (o que comprova que o e-mail é dela),
+// cria a senha e o app cria seu perfil em /usuarios/{uid} com os dados do convite.
+//
+// Perfis (campo "papel"):
+//   membro     – registra reuniões e vê apenas as que ele mesmo registrou
+//   supervisor – além disso, vê e corrige todas as reuniões da sua unidade
+//   admin      – vê tudo, de todas as unidades, e gerencia usuários e unidades
+//   inativo    – acesso suspenso pelo admin
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+    function perfilPath() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
+    }
+    function perfil() {
+      return get(perfilPath()).data;
+    }
+    function ativo() {
+      return logado() && exists(perfilPath()) && perfil().papel in ['membro', 'supervisor', 'admin'];
+    }
+    function ehAdmin() {
+      return ativo() && perfil().papel == 'admin';
+    }
+    function supervisorDa(unidadeId) {
+      return ativo() && perfil().papel == 'supervisor' && perfil().unidadeId == unidadeId;
+    }
+    function podeVer(reuniao) {
+      return ativo() && (reuniao.autorUid == request.auth.uid || ehAdmin() || supervisorDa(reuniao.unidadeId));
+    }
+    function contagem(v) {
+      return v is int && v >= 0 && v < 10000;
+    }
+    function texto(v, max) {
+      return v is string && v.size() <= max;
+    }
+    function reuniaoValida(d) {
+      return d.keys().hasOnly(['unidadeId', 'autorUid', 'autorNome', 'data', 'horaInicio', 'horaFim',
+          'responsavelReuniao', 'responsavelLar', 'endereco', 'participantes', 'johreiMembros',
+          'johreiFrequentadores', 'johreiPrimeiraVez', 'observacoes', 'criadoEm', 'atualizadoEm'])
+        && d.unidadeId is string
+        && exists(/databases/$(database)/documents/unidades/$(d.unidadeId))
+        && d.data is string && d.data.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.horaInicio is string && d.horaInicio.matches('^[0-9]{2}:[0-9]{2}$')
+        && texto(d.horaFim, 5)
+        && texto(d.responsavelReuniao, 120) && d.responsavelReuniao.size() > 0
+        && texto(d.responsavelLar, 120) && d.responsavelLar.size() > 0
+        && texto(d.endereco, 200)
+        && texto(d.observacoes, 5000)
+        && texto(d.autorNome, 120)
+        && contagem(d.participantes)
+        && contagem(d.johreiMembros)
+        && contagem(d.johreiFrequentadores)
+        && contagem(d.johreiPrimeiraVez);
+    }
+
+    match /unidades/{unidadeId} {
+      allow read: if logado();
+      allow create, update: if ehAdmin() && texto(request.resource.data.nome, 120)
+        && request.resource.data.nome.size() > 0 && request.resource.data.keys().hasOnly(['nome']);
+      allow delete: if false;
+    }
+
+    function papelValido(p) {
+      return p in ['membro', 'supervisor', 'admin', 'inativo'];
+    }
+    function conviteDoMeuEmail() {
+      return /databases/$(database)/documents/convites/$(request.auth.token.email);
+    }
+
+    match /convites/{email} {
+      allow read: if ehAdmin() || (logado() && request.auth.token.email == email);
+      allow create, update: if ehAdmin()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['nome', 'email', 'papel', 'unidadeId', 'criadoEm'])
+        && request.resource.data.email == email
+        && texto(request.resource.data.nome, 120) && request.resource.data.nome.size() > 0
+        && papelValido(request.resource.data.papel);
+      allow delete: if ehAdmin();
+    }
+
+    match /usuarios/{uid} {
+      allow read: if logado() && (request.auth.uid == uid || ehAdmin());
+      // Criado no primeiro acesso, copiando papel e unidade do convite do e-mail verificado.
+      allow create: if logado() && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && exists(conviteDoMeuEmail())
+        && request.resource.data.keys().hasOnly(['nome', 'email', 'papel', 'unidadeId', 'criadoEm'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.papel == get(conviteDoMeuEmail()).data.papel
+        && request.resource.data.unidadeId == get(conviteDoMeuEmail()).data.unidadeId
+        && texto(request.resource.data.nome, 120) && request.resource.data.nome.size() > 0;
+      // O usuário só pode mudar o próprio nome; papel e unidade são definidos pelo admin.
+      allow update: if (ehAdmin() && papelValido(request.resource.data.papel))
+        || (logado() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome'])
+            && texto(request.resource.data.nome, 120) && request.resource.data.nome.size() > 0);
+      allow delete: if ehAdmin();
+    }
+
+    match /reunioes/{reuniaoId} {
+      allow read: if podeVer(resource.data);
+      allow create: if ativo()
+        && request.resource.data.autorUid == request.auth.uid
+        && (ehAdmin() || request.resource.data.unidadeId == perfil().unidadeId)
+        && reuniaoValida(request.resource.data);
+      // Autor e unidade não mudam depois de criada.
+      allow update: if podeVer(resource.data)
+        && request.resource.data.autorUid == resource.data.autorUid
+        && request.resource.data.unidadeId == resource.data.unidadeId
+        && reuniaoValida(request.resource.data);
+      allow delete: if podeVer(resource.data);
+    }
+  }
+}

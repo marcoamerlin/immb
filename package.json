@@ -1,0 +1,16 @@
+{
+  "name": "immb",
+  "private": true,
+  "description": "Apps da IMMB",
+  "scripts": {
+    "dev": "firebase emulators:start --project demo-immb",
+    "test": "firebase emulators:exec --only firestore --project demo-immb \"node --test tests/*.test.mjs\"",
+    "deploy": "firebase deploy --only hosting,firestore",
+    "demo:admin": "node scripts/convidar-admin-demo.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.32.1"
+  }
+}

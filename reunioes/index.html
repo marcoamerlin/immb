@@ -2,161 +2,322 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1f5c99">
-  <title>Reuniões IMMB</title>
+  <title>Reuniões no Lar · IMMB</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="icon.svg" alt="" width="32" height="32">
-      <div>
-        <strong>Reuniões IMMB</strong>
-        <small>Igreja Messiânica Mundial do Brasil</small>
+  <div id="aviso-demo" class="aviso-demo" hidden>Modo de teste (emulador local) — os dados não são reais.</div>
+
+  <!-- Carregando -->
+  <section id="tela-carregando" class="tela centro">
+    <img src="icon.svg" alt="" width="64" height="64">
+    <p class="hint">Carregando…</p>
+  </section>
+
+  <!-- Login -->
+  <section id="tela-login" class="tela centro" hidden>
+    <form id="form-login" class="cartao">
+      <img src="icon.svg" alt="" width="56" height="56">
+      <h1>Reuniões no Lar</h1>
+      <p class="hint">Igreja Messiânica Mundial do Brasil</p>
+      <label>E-mail
+        <input type="email" name="email" autocomplete="username" required>
+      </label>
+      <label>Senha
+        <input type="password" name="senha" autocomplete="current-password" required>
+      </label>
+      <p class="erro" role="alert"></p>
+      <button class="primary grande">Entrar</button>
+      <div class="links-login">
+        <button type="button" class="link" data-ir="tela-cadastro">Primeiro acesso</button>
+        <button type="button" class="link" data-ir="tela-esqueci">Esqueci minha senha</button>
       </div>
+    </form>
+  </section>
+
+  <!-- Primeiro acesso -->
+  <section id="tela-cadastro" class="tela centro" hidden>
+    <form id="form-cadastro" class="cartao">
+      <h1>Primeiro acesso</h1>
+      <p>Use o e-mail que o responsável da sua unidade cadastrou e escolha uma senha.</p>
+      <label>E-mail
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <label>Escolha uma senha <small class="hint">(mínimo 6 caracteres)</small>
+        <input type="password" name="senha" autocomplete="new-password" minlength="6" required>
+      </label>
+      <label>Repita a senha
+        <input type="password" name="confirmacao" autocomplete="new-password" minlength="6" required>
+      </label>
+      <p class="erro" role="alert"></p>
+      <button class="primary grande">Criar minha senha</button>
+      <button type="button" class="link" data-ir="tela-login">← Voltar para o login</button>
+    </form>
+  </section>
+
+  <!-- Confirmar e-mail -->
+  <section id="tela-verificar" class="tela centro" hidden>
+    <div class="cartao" id="cartao-verificar">
+      <h1>Confirme seu e-mail</h1>
+      <p>Enviamos um e-mail para <strong id="verificar-email"></strong>. Abra esse e-mail (veja também a caixa de spam), toque no link de confirmação e depois volte aqui.</p>
+      <div class="sucesso" id="verificar-teste" hidden></div>
+      <p class="erro" role="alert"></p>
+      <button class="primary grande" id="ja-confirmei">Já confirmei meu e-mail</button>
+      <button type="button" id="reenviar-confirmacao">Reenviar e-mail</button>
+      <button type="button" class="link" data-acao="sair">Sair</button>
     </div>
-    <nav class="tabs" role="tablist">
-      <button role="tab" data-view="reunioes" aria-selected="true">Reuniões</button>
-      <button role="tab" data-view="membros">Membros</button>
-      <button role="tab" data-view="dados">Dados</button>
-    </nav>
-  </header>
+  </section>
 
-  <main>
-    <!-- Lista de reuniões -->
-    <section id="view-reunioes" class="view">
-      <div class="toolbar">
-        <input type="search" id="busca" placeholder="Buscar reunião…" aria-label="Buscar reunião">
-        <select id="filtro-tipo" aria-label="Filtrar por tipo"></select>
-        <button class="primary" id="nova-reuniao">+ Nova reunião</button>
-      </div>
-      <h2>Próximas</h2>
-      <ul id="lista-proximas" class="cards"></ul>
-      <h2>Realizadas</h2>
-      <ul id="lista-realizadas" class="cards"></ul>
-    </section>
+  <!-- Esqueci a senha -->
+  <section id="tela-esqueci" class="tela centro" hidden>
+    <form id="form-esqueci" class="cartao">
+      <h1>Esqueci minha senha</h1>
+      <p>Digite seu e-mail. Você receberá um link para criar uma nova senha.</p>
+      <label>E-mail
+        <input type="email" name="email" autocomplete="email" required>
+      </label>
+      <p class="erro" role="alert"></p>
+      <button class="primary grande">Enviar link</button>
+      <div class="sucesso" hidden></div>
+      <button type="button" class="link" data-ir="tela-login">← Voltar para o login</button>
+    </form>
+  </section>
 
-    <!-- Detalhe / edição de reunião -->
-    <section id="view-reuniao" class="view" hidden>
-      <div class="toolbar">
-        <button id="voltar">← Voltar</button>
-        <span class="spacer"></span>
-        <button id="imprimir">Imprimir ata</button>
-        <button class="danger" id="excluir-reuniao">Excluir</button>
-      </div>
+  <!-- Sem acesso -->
+  <section id="tela-sem-acesso" class="tela centro" hidden>
+    <div class="cartao">
+      <h1>Acesso não liberado</h1>
+      <p id="sem-acesso-msg"></p>
+      <button class="grande" data-acao="sair">Sair</button>
+    </div>
+  </section>
 
-      <form id="form-reuniao" class="panel">
-        <div class="grid">
-          <label>Título
-            <input name="titulo" required placeholder="Ex.: Culto Mensal de Outubro">
-          </label>
-          <label>Tipo
-            <select name="tipo"></select>
-          </label>
-          <label>Data
-            <input type="date" name="data" required>
-          </label>
-          <label>Horário
-            <input type="time" name="hora">
-          </label>
-          <label>Local
-            <input name="local" placeholder="Ex.: Johrei Center">
-          </label>
-          <label>Responsável / Dirigente
-            <input name="responsavel" list="membros-datalist" placeholder="Nome">
-          </label>
+  <!-- App -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <img src="icon.svg" alt="" width="36" height="36">
+        <div>
+          <strong>Reuniões no Lar</strong>
+          <small id="unidade-usuario"></small>
         </div>
-        <datalist id="membros-datalist"></datalist>
-      </form>
-
-      <div class="panel">
-        <h3>Pauta</h3>
-        <ol id="pauta" class="pauta"></ol>
-        <form id="form-pauta" class="inline">
-          <input name="item" placeholder="Novo item da pauta (ex.: Oração inicial, Leitura do Ensinamento…)" required>
-          <input name="duracao" type="number" min="0" step="5" placeholder="min" aria-label="Duração em minutos">
-          <button>Adicionar</button>
-        </form>
-        <p class="hint" id="pauta-total"></p>
-        <button type="button" id="pauta-modelo" class="link">Usar pauta modelo para este tipo</button>
       </div>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-view="reunioes" aria-selected="true">Reuniões</button>
+        <button role="tab" data-view="admin" data-so-admin hidden>Administração</button>
+        <button role="tab" data-view="conta">Minha conta</button>
+      </nav>
+    </header>
 
-      <div class="panel">
-        <h3>Presença <span id="presenca-contagem" class="badge"></span></h3>
-        <div class="toolbar small">
-          <input type="search" id="busca-presenca" placeholder="Filtrar membros…" aria-label="Filtrar membros">
-          <button type="button" id="marcar-todos">Marcar todos</button>
-          <button type="button" id="desmarcar-todos">Limpar</button>
+    <main>
+      <!-- Lista + resumo -->
+      <section id="view-reunioes" class="view">
+        <div class="filtros panel">
+          <div class="linha">
+            <label id="campo-escopo" hidden>Mostrar
+              <select id="escopo"></select>
+            </label>
+            <label id="campo-filtro-unidade" hidden>Unidade
+              <select id="filtro-unidade"></select>
+            </label>
+            <label>De
+              <input type="date" id="de">
+            </label>
+            <label>Até
+              <input type="date" id="ate">
+            </label>
+          </div>
+          <div class="atalhos">
+            <button type="button" data-periodo="mes">Este mês</button>
+            <button type="button" data-periodo="mes-anterior">Mês passado</button>
+            <button type="button" data-periodo="trimestre">Últimos 3 meses</button>
+            <button type="button" data-periodo="ano">Este ano</button>
+          </div>
+          <input type="search" id="busca" placeholder="Buscar por responsável, lar, observação…" aria-label="Buscar">
         </div>
-        <ul id="presenca" class="presenca"></ul>
-        <form id="form-visitante" class="inline">
-          <input name="nome" placeholder="Visitante / frequentador (nome)" required>
-          <button>Adicionar visitante</button>
-        </form>
-        <ul id="visitantes" class="chips"></ul>
-      </div>
 
-      <div class="panel">
-        <h3>Ata / Anotações</h3>
-        <textarea id="ata" rows="8" placeholder="Registre aqui os principais pontos, testemunhos, avisos e decisões…"></textarea>
-      </div>
+        <div class="resumo" id="resumo"></div>
 
-      <div class="panel">
-        <h3>Encaminhamentos</h3>
-        <ul id="tarefas" class="tarefas"></ul>
-        <form id="form-tarefa" class="inline">
-          <input name="descricao" placeholder="O que será feito" required>
-          <input name="quem" list="membros-datalist" placeholder="Quem">
-          <input name="prazo" type="date" aria-label="Prazo">
-          <button>Adicionar</button>
-        </form>
-      </div>
-      <p class="hint" id="salvo-em"></p>
-    </section>
-
-    <!-- Membros -->
-    <section id="view-membros" class="view" hidden>
-      <form id="form-membro" class="panel inline">
-        <input name="nome" placeholder="Nome" required>
-        <input name="funcao" placeholder="Função (ex.: Ministro, Missionário, Membro)">
-        <input name="telefone" type="tel" placeholder="Telefone">
-        <button class="primary">Adicionar membro</button>
-      </form>
-      <input type="search" id="busca-membro" placeholder="Buscar membro…" aria-label="Buscar membro">
-      <table class="tabela">
-        <thead><tr><th>Nome</th><th>Função</th><th>Telefone</th><th>Presenças</th><th></th></tr></thead>
-        <tbody id="lista-membros"></tbody>
-      </table>
-    </section>
-
-    <!-- Dados -->
-    <section id="view-dados" class="view" hidden>
-      <div class="panel">
-        <h3>Backup</h3>
-        <p>Os dados ficam salvos apenas neste aparelho/navegador. Faça backups regularmente e use-os para transferir os dados para outro aparelho.</p>
         <div class="toolbar">
-          <button class="primary" id="exportar">Exportar backup (.json)</button>
-          <label class="button">Importar backup
-            <input type="file" id="importar" accept="application/json,.json" hidden>
-          </label>
+          <h2 id="titulo-lista" class="spacer"></h2>
+          <button class="primary" id="nova-reuniao">+ Nova reunião</button>
         </div>
-      </div>
-      <div class="panel">
-        <h3>Tipos de reunião</h3>
-        <ul id="lista-tipos" class="chips"></ul>
-        <form id="form-tipo" class="inline">
-          <input name="nome" placeholder="Novo tipo de reunião" required>
-          <button>Adicionar</button>
+        <p id="status-lista" class="hint"></p>
+        <ul id="lista" class="lista"></ul>
+
+        <div class="toolbar fim">
+          <button type="button" id="exportar-csv">Baixar planilha (CSV)</button>
+          <button type="button" id="imprimir-relatorio">Imprimir relatório</button>
+        </div>
+      </section>
+
+      <!-- Formulário -->
+      <section id="view-form" class="view" hidden>
+        <form id="form-reuniao" novalidate>
+          <div class="toolbar">
+            <button type="button" id="cancelar">← Voltar</button>
+            <h2 id="form-titulo" class="spacer">Nova reunião</h2>
+          </div>
+          <p id="form-autor" class="hint"></p>
+
+          <div class="panel">
+            <h3>Reunião</h3>
+            <label id="campo-unidade-form" hidden>Unidade
+              <select name="unidadeId"></select>
+            </label>
+            <div class="grid">
+              <label>Data
+                <input type="date" name="data" required>
+              </label>
+              <label>Início
+                <input type="time" name="horaInicio" required>
+              </label>
+              <label>Término
+                <input type="time" name="horaFim">
+              </label>
+            </div>
+            <div class="grid">
+              <label>Responsável pela reunião
+                <input name="responsavelReuniao" list="lista-responsaveis" required autocomplete="off" placeholder="Nome">
+              </label>
+              <label>Responsável pelo lar
+                <input name="responsavelLar" list="lista-lares" required autocomplete="off" placeholder="Nome do dono(a) da casa">
+              </label>
+            </div>
+            <label>Endereço do lar <span class="opcional">(opcional)</span>
+              <input name="endereco" list="lista-enderecos" autocomplete="off" placeholder="Rua, número, bairro">
+            </label>
+            <datalist id="lista-responsaveis"></datalist>
+            <datalist id="lista-lares"></datalist>
+            <datalist id="lista-enderecos"></datalist>
+          </div>
+
+          <div class="panel">
+            <h3>Participação</h3>
+            <div class="contadores">
+              <div class="contador destaque">
+                <span>Pessoas que participaram</span>
+                <div class="stepper">
+                  <button type="button" data-delta="-1" aria-label="Diminuir">−</button>
+                  <input type="number" name="participantes" min="0" inputmode="numeric" value="0" aria-label="Pessoas que participaram">
+                  <button type="button" data-delta="1" aria-label="Aumentar">+</button>
+                </div>
+              </div>
+            </div>
+            <h4>Johreis ministrados</h4>
+            <div class="contadores">
+              <div class="contador">
+                <span>Membros</span>
+                <div class="stepper">
+                  <button type="button" data-delta="-1" aria-label="Diminuir">−</button>
+                  <input type="number" name="johreiMembros" min="0" inputmode="numeric" value="0" aria-label="Johreis para membros">
+                  <button type="button" data-delta="1" aria-label="Aumentar">+</button>
+                </div>
+              </div>
+              <div class="contador">
+                <span>Frequentadores</span>
+                <div class="stepper">
+                  <button type="button" data-delta="-1" aria-label="Diminuir">−</button>
+                  <input type="number" name="johreiFrequentadores" min="0" inputmode="numeric" value="0" aria-label="Johreis para frequentadores">
+                  <button type="button" data-delta="1" aria-label="Aumentar">+</button>
+                </div>
+              </div>
+              <div class="contador">
+                <span>1ª vez</span>
+                <div class="stepper">
+                  <button type="button" data-delta="-1" aria-label="Diminuir">−</button>
+                  <input type="number" name="johreiPrimeiraVez" min="0" inputmode="numeric" value="0" aria-label="Johreis para pessoas de 1ª vez">
+                  <button type="button" data-delta="1" aria-label="Aumentar">+</button>
+                </div>
+              </div>
+            </div>
+            <p class="total-johrei">Total de Johreis: <strong id="total-johrei">0</strong></p>
+          </div>
+
+          <div class="panel">
+            <h3>Observações</h3>
+            <textarea name="observacoes" rows="4" maxlength="5000" placeholder="Relatos, pedidos de oração, avisos…"></textarea>
+          </div>
+
+          <p id="form-erro" class="erro" role="alert"></p>
+          <div class="toolbar acoes-form">
+            <button type="button" class="danger" id="excluir" hidden>Excluir</button>
+            <span class="spacer"></span>
+            <button type="submit" class="primary grande">Salvar reunião</button>
+          </div>
         </form>
-      </div>
-    </section>
-  </main>
+      </section>
+
+      <!-- Administração -->
+      <section id="view-admin" class="view" hidden>
+        <div class="panel">
+          <h3>Dar acesso a uma pessoa</h3>
+          <p class="hint">Cadastre o e-mail da pessoa. Depois, envie a ela o endereço do app e peça para tocar em <strong>“Primeiro acesso”</strong>, digitar esse e-mail e escolher uma senha.</p>
+          <form id="form-convite" class="grid">
+            <label>Nome
+              <input name="nome" required maxlength="120">
+            </label>
+            <label>E-mail
+              <input name="email" type="email" required>
+            </label>
+            <label>Perfil
+              <select name="papel"></select>
+            </label>
+            <label>Unidade
+              <select name="unidadeId"></select>
+            </label>
+            <p class="erro" role="alert"></p>
+            <button class="primary">Dar acesso</button>
+          </form>
+          <dl class="legenda" id="legenda-papeis"></dl>
+        </div>
+
+        <div class="panel">
+          <h3>Pessoas com acesso</h3>
+          <div class="tabela-rolagem">
+            <table class="tabela">
+              <thead><tr><th>Nome</th><th>Perfil</th><th>Unidade</th><th>Situação</th><th></th></tr></thead>
+              <tbody id="lista-usuarios"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Unidades</h3>
+          <ul id="lista-unidades" class="itens"></ul>
+          <form id="form-unidade" class="inline">
+            <input name="nome" placeholder="Nome da unidade (ex.: Johrei Center Penha)" required maxlength="120">
+            <button>Adicionar unidade</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Conta -->
+      <section id="view-conta" class="view" hidden>
+        <div class="panel">
+          <h3>Minha conta</h3>
+          <dl class="dados-conta" id="dados-conta"></dl>
+          <form id="form-nome" class="inline">
+            <input name="nome" required maxlength="120" aria-label="Seu nome">
+            <button>Alterar nome</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h3>Senha</h3>
+          <p class="hint">Para trocar a senha, saia e use “Esqueci minha senha” na tela de login.</p>
+          <button class="danger" data-acao="sair">Sair do app</button>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <article id="impressao"></article>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

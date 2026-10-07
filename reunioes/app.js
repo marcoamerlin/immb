@@ -162,10 +162,12 @@ $('#form-cadastro').addEventListener('submit', async (e) => {
     await srv.criarConta(f.email.value, f.senha.value);
     // Confere o convite antes de mandar o e-mail; sem convite, desfaz a conta
     // para que a pessoa possa tentar de novo depois de ser liberada.
-    if (!(await srv.conviteExiste(f.email.value))) {
+    const convite = await srv.buscarConvite(f.email.value);
+    if (!convite) {
       await srv.excluirContaAtual();
       return mostrarErro(f, 'Este e-mail ainda não foi liberado. Confira se digitou certo ou peça ao responsável da sua unidade para cadastrá-lo.');
     }
+    await srv.definirNomeExibido(convite.nome);
     await srv.enviarConfirmacao();
     const email = srv.normalizarEmail(f.email.value);
     f.reset();
@@ -489,7 +491,7 @@ function renderLista() {
     </li>`).join('') || '<li class="vazio">Nenhuma reunião neste período.</li>';
 
   const podeRegistrar = ehAdmin() || Boolean(s.perfil.unidadeId);
-  $('#nova-reuniao').disabled = !podeRegistrar || !s.unidades.length;
+  $('#nova-reuniao').disabled = !podeRegistrar || (ehAdmin() && !s.unidades.length);
   $('#nova-reuniao').title = podeRegistrar ? '' : 'Peça ao administrador para definir sua unidade.';
 }
 
@@ -584,7 +586,7 @@ function validar(f) {
     if (!f[campo].value.trim()) return [campo, msg];
   }
   if (f.horaFim.value && f.horaFim.value <= f.horaInicio.value) return ['horaFim', 'O término deve ser depois do início.'];
-  if (!f.unidadeId.value) return ['unidadeId', 'Escolha a unidade.'];
+  if (ehAdmin() && !editando && !f.unidadeId.value) return ['unidadeId', 'Escolha a unidade.'];
   return null;
 }
 

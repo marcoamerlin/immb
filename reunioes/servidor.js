@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   connectAuthEmulator, createUserWithEmailAndPassword, deleteUser, getAuth, onAuthStateChanged,
-  sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut,
+  sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
   addDoc, collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, initializeFirestore, onSnapshot, orderBy,
@@ -60,9 +60,14 @@ export function observarPerfil(uid, cb, erro) {
   }, erro);
 }
 
-export async function conviteExiste(email) {
-  return (await getDoc(doc(db, 'convites', normalizarEmail(email)))).exists();
+// Retorna o convite do e-mail (ou null se ele não foi liberado pelo admin).
+export async function buscarConvite(email) {
+  const c = await getDoc(doc(db, 'convites', normalizarEmail(email)));
+  return c.exists() ? c.data() : null;
 }
+
+// Nome usado nos e-mails do Firebase ("Olá, %DISPLAY_NAME%").
+export const definirNomeExibido = (nome) => updateProfile(auth.currentUser, { displayName: nome });
 
 // Primeiro acesso: cria o perfil a partir do convite. Retorna false se não houver convite.
 export async function criarPerfilDoConvite(user) {

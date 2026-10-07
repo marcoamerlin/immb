@@ -179,8 +179,11 @@ label input, label select { color: var(--texto); font-size: 1rem; width: 100%; }
   .legenda dd { margin-bottom: 6px; }
 }
 
+@page { size: A4; margin: 15mm 12mm; }
+
 @media print {
   body { background: #fff; color: #000; }
+  #impressao tr { break-inside: avoid; }
   .aviso-demo, .tela, #app, #toast { display: none !important; }
   #impressao { display: block; font-size: 10pt; }
   #impressao h1 { font-size: 16pt; margin: 0 0 4px; }

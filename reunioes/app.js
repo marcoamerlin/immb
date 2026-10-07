@@ -466,7 +466,9 @@ function renderLista() {
 
   $('#titulo-lista').textContent = descricaoPeriodo();
   $('#status-lista').textContent = s.pendentes
-    ? '⏳ Há alterações aguardando internet para serem enviadas.' : '';
+    ? '⏳ Há alterações aguardando internet para serem enviadas.'
+    : ehAdmin() && !s.unidades.length ? 'Para começar, cadastre a primeira unidade em Administração → Unidades.'
+      : !ehAdmin() && !s.perfil.unidadeId ? 'Sua unidade ainda não foi definida. Peça ao administrador para defini-la.' : '';
 
   $('#lista').innerHTML = lista.map((r) => `
     <li class="item" data-id="${r.id}" tabindex="0" role="button">

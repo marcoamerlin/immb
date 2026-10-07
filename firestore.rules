@@ -42,7 +42,9 @@ service cloud.firestore {
     function reuniaoValida(d) {
       return d.keys().hasOnly(['unidadeId', 'autorUid', 'autorNome', 'data', 'horaInicio', 'horaFim',
           'responsavelReuniao', 'responsavelLar', 'endereco', 'participantes', 'johreiMembros',
-          'johreiFrequentadores', 'johreiPrimeiraVez', 'observacoes', 'criadoEm', 'atualizadoEm'])
+          'johreiFrequentadores', 'johreiPrimeiraVez', 'observacoes', 'status', 'criadoEm', 'atualizadoEm'])
+        // Reuniões antigas não têm "status" e contam como encerradas.
+        && (!('status' in d) || d.status in ['andamento', 'encerrada'])
         && d.unidadeId is string
         && exists(/databases/$(database)/documents/unidades/$(d.unidadeId))
         && d.data is string && d.data.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -101,6 +103,14 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome'])
             && texto(request.resource.data.nome, 120) && request.resource.data.nome.size() > 0);
       allow delete: if ehAdmin();
+
+      // Aparelhos (tokens de notificação) em que a pessoa ativou os avisos.
+      match /tokens/{token} {
+        allow read, delete: if logado() && request.auth.uid == uid;
+        allow create, update: if logado() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['criadoEm', 'aparelho'])
+          && texto(request.resource.data.aparelho, 200);
+      }
     }
 
     match /reunioes/{reuniaoId} {

@@ -1,6 +1,6 @@
 // Cache para o app abrir sem internet. Os dados (Firestore) têm cache próprio.
-const CACHE = 'immb-reunioes-v4';
-const ARQUIVOS = ['./', 'index.html', 'styles.css', 'app.js', 'servidor.js', 'config.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'immb-reunioes-v5';
+const ARQUIVOS = ['./', 'index.html', 'styles.css', 'app.js', 'servidor.js', 'config.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)));
@@ -31,4 +31,26 @@ self.addEventListener('fetch', (e) => {
       })
       .catch(() => caches.match(e.request, { ignoreSearch: true })),
   );
+});
+
+// Aviso de reunião iniciada, enviado pelo servidor (Firebase Cloud Messaging).
+self.addEventListener('push', (e) => {
+  let carga = {};
+  try { carga = e.data ? e.data.json() : {}; } catch { /* conteúdo inesperado */ }
+  const d = carga.data || carga.notification || carga;
+  e.waitUntil(self.registration.showNotification(d.titulo || d.title || 'Reuniões no Lar', {
+    body: d.corpo || d.body || '',
+    icon: 'icon-192.png',
+    tag: d.reuniaoId || undefined,
+    data: { url: d.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const destino = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((janelas) => {
+    const aberta = janelas.find((j) => j.url.startsWith(self.registration.scope));
+    return aberta ? aberta.focus() : self.clients.openWindow(destino);
+  }));
 });

@@ -16,5 +16,9 @@ const teste = { apiKey: 'demo-api-key', authDomain: 'demo-immb.firebaseapp.com',
 export const MODO_TESTE = ['localhost', '127.0.0.1'].includes(location.hostname);
 export const firebaseConfig = MODO_TESTE ? teste : producao;
 
+// Chave pública das notificações (Firebase → Configurações do projeto → Cloud Messaging →
+// Certificados push da Web). Vazia = notificações desligadas no app.
+export const VAPID_KEY = '';
+
 // Nome sugerido para a primeira unidade criada pelo administrador.
 export const UNIDADE_INICIAL = 'Johrei Center Aricanduva';

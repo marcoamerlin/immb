@@ -191,3 +191,19 @@ describe('admin', () => {
     await assertFails(deleteDoc(doc(db('adm'), 'unidades/penha')));
   });
 });
+
+describe('situação da reunião e notificações', () => {
+  test('aceita reunião em andamento e encerrada', async () => {
+    await assertSucceeds(setDoc(doc(db('ana'), 'reunioes/a1'), reuniao({ status: 'andamento', horaFim: '' })));
+    await assertSucceeds(updateDoc(doc(db('ana'), 'reunioes/a1'), { status: 'encerrada', horaFim: '21:00' }));
+  });
+  test('rejeita situação desconhecida', async () => {
+    await assertFails(setDoc(doc(db('ana'), 'reunioes/a2'), reuniao({ status: 'cancelada' })));
+  });
+  test('cada pessoa registra só os próprios aparelhos', async () => {
+    await assertSucceeds(setDoc(doc(db('sup'), 'usuarios/sup/tokens/tok1'), { criadoEm: '', aparelho: 'Android' }));
+    await assertFails(setDoc(doc(db('ana'), 'usuarios/sup/tokens/tok2'), { criadoEm: '', aparelho: 'Android' }));
+    await assertFails(getDoc(doc(db('ana'), 'usuarios/sup/tokens/tok1')));
+    await assertSucceeds(deleteDoc(doc(db('sup'), 'usuarios/sup/tokens/tok1')));
+  });
+});

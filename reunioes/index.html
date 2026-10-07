@@ -7,7 +7,7 @@
   <title>Reuniões no Lar · IMMB</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -143,10 +143,20 @@
 
         <div class="resumo" id="resumo"></div>
 
-        <div class="toolbar">
-          <h2 id="titulo-lista" class="spacer"></h2>
-          <button class="primary" id="nova-reuniao">+ Nova reunião</button>
+        <div id="aviso-notificacoes" class="panel aviso" hidden>
+          <p><strong>🔔 Receba um aviso quando uma reunião começar.</strong><br>
+            <span class="hint" id="aviso-notificacoes-texto">Ative as notificações neste aparelho para saber na hora quando alguém da sua unidade iniciar uma reunião.</span></p>
+          <div class="toolbar">
+            <button type="button" class="primary" data-acao="ativar-notificacoes">Ativar notificações</button>
+            <button type="button" class="link" id="dispensar-notificacoes">Agora não</button>
+          </div>
         </div>
+
+        <div class="botoes-reuniao">
+          <button type="button" class="primary grande" id="iniciar-reuniao">▶ Iniciar reunião</button>
+          <button type="button" id="registrar-reuniao" title="Para lançar uma reunião que já aconteceu">+ Registrar reunião já realizada</button>
+        </div>
+        <h2 id="titulo-lista" class="titulo-lista"></h2>
         <p id="status-lista" class="hint"></p>
         <ul id="lista" class="lista"></ul>
 
@@ -164,6 +174,7 @@
             <h2 id="form-titulo" class="spacer">Nova reunião</h2>
           </div>
           <p id="form-autor" class="hint"></p>
+          <p id="form-dica" class="dica" hidden></p>
 
           <div class="panel">
             <h3>Reunião</h3>
@@ -177,7 +188,7 @@
               <label>Início
                 <input type="time" name="horaInicio" required>
               </label>
-              <label>Término
+              <label id="campo-hora-fim">Término
                 <input type="time" name="horaFim">
               </label>
             </div>
@@ -197,7 +208,7 @@
             <datalist id="lista-enderecos"></datalist>
           </div>
 
-          <div class="panel">
+          <div class="panel" id="painel-participacao">
             <h3>Participação</h3>
             <div class="contadores">
               <div class="contador destaque">
@@ -239,7 +250,7 @@
             <p class="total-johrei">Total de Johreis: <strong id="total-johrei">0</strong></p>
           </div>
 
-          <div class="panel">
+          <div class="panel" id="painel-observacoes">
             <h3>Observações</h3>
             <textarea name="observacoes" rows="4" maxlength="5000" placeholder="Relatos, pedidos de oração, avisos…"></textarea>
           </div>
@@ -248,7 +259,8 @@
           <div class="toolbar acoes-form">
             <button type="button" class="danger" id="excluir" hidden>Excluir</button>
             <span class="spacer"></span>
-            <button type="submit" class="primary grande">Salvar reunião</button>
+            <button type="submit" id="salvar" class="grande">Salvar reunião</button>
+            <button type="submit" id="encerrar" class="primary grande" hidden>■ Encerrar reunião</button>
           </div>
         </form>
       </section>
@@ -306,6 +318,14 @@
             <input name="nome" required maxlength="120" aria-label="Seu nome">
             <button>Alterar nome</button>
           </form>
+        </div>
+        <div class="panel" id="painel-notificacoes" hidden>
+          <h3>Notificações</h3>
+          <p id="notificacoes-estado"></p>
+          <div class="toolbar">
+            <button type="button" class="primary" data-acao="ativar-notificacoes" id="botao-ativar-notificacoes">Ativar notificações neste aparelho</button>
+            <button type="button" id="desativar-notificacoes" hidden>Desativar neste aparelho</button>
+          </div>
         </div>
         <div class="panel">
           <h3>Senha</h3>

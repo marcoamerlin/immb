@@ -8,7 +8,10 @@ import {
   addDoc, collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, initializeFirestore, onSnapshot, orderBy,
   persistentLocalCache, persistentMultipleTabManager, query, setDoc, updateDoc, where,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { firebaseConfig, MODO_TESTE } from './config.js';
+import {
+  deleteToken, getMessaging, getToken, isSupported,
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js';
+import { firebaseConfig, MODO_TESTE, VAPID_KEY } from './config.js';
 
 export const MODO_DEMO = MODO_TESTE;
 
@@ -122,3 +125,60 @@ export const novoIdReuniao = () => doc(collection(db, 'reunioes')).id;
 // terminam quando a conexão volta, mas a alteração já vale localmente.
 export const salvarReuniao = (id, dados) => setDoc(doc(db, 'reunioes', id), dados);
 export const excluirReuniao = (id) => deleteDoc(doc(db, 'reunioes', id));
+
+// ---------- Notificações (aviso de reunião iniciada) ----------
+// O aviso é enviado pelo servidor (functions/index.js) para os aparelhos
+// registrados em /usuarios/{uid}/tokens. Aqui só registramos este aparelho.
+
+const chaveToken = (uid) => `immb-notificacao-${uid}`;
+
+function lerLocal(chave) {
+  try { return localStorage.getItem(chave); } catch { return null; }
+}
+function gravarLocal(chave, valor) {
+  try { if (valor) localStorage.setItem(chave, valor); else localStorage.removeItem(chave); } catch { /* sem armazenamento */ }
+}
+
+export const NOTIFICACOES_CONFIGURADAS = Boolean(VAPID_KEY) && !MODO_DEMO;
+
+export async function notificacoesSuportadas() {
+  if (MODO_DEMO || !VAPID_KEY || !('serviceWorker' in navigator) || !('Notification' in window)) return false;
+  try { return await isSupported(); } catch { return false; }
+}
+
+// 'ativo' | 'inativo' | 'negado' (o usuário bloqueou no navegador)
+export function estadoNotificacoes(uid) {
+  if (!('Notification' in window)) return 'inativo';
+  if (Notification.permission === 'denied') return 'negado';
+  return Notification.permission === 'granted' && lerLocal(chaveToken(uid)) ? 'ativo' : 'inativo';
+}
+
+function descreverAparelho() {
+  const ua = navigator.userAgent;
+  const sistema = /iPhone|iPad/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows'
+    : /Mac/.test(ua) ? 'Mac' : 'Outro';
+  return `${sistema} · ${ua}`.slice(0, 200);
+}
+
+// Pede permissão (se preciso), obtém o token do aparelho e o registra para o usuário.
+export async function ativarNotificacoes(uid) {
+  const permissao = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+  if (permissao !== 'granted') {
+    const erro = new Error('Permissão negada');
+    erro.code = 'notificacao/negada';
+    throw erro;
+  }
+  const registro = await navigator.serviceWorker.register('sw.js');
+  await navigator.serviceWorker.ready;
+  const token = await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: registro });
+  await setDoc(doc(db, 'usuarios', uid, 'tokens', token), { criadoEm: new Date().toISOString(), aparelho: descreverAparelho() });
+  gravarLocal(chaveToken(uid), token);
+  return token;
+}
+
+export async function desativarNotificacoes(uid) {
+  const token = lerLocal(chaveToken(uid));
+  gravarLocal(chaveToken(uid), null);
+  if (token) await deleteDoc(doc(db, 'usuarios', uid, 'tokens', token)).catch(() => {});
+  await deleteToken(getMessaging(app)).catch(() => {});
+}

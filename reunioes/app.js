@@ -123,8 +123,13 @@ $$('[data-ir]').forEach((b) => b.addEventListener('click', () => {
   mostrarTela(b.dataset.ir);
 }));
 
-document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-acao=sair]')) srv.sair();
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('[data-acao=sair]')) return;
+  // Deixa de avisar este aparelho, para que o próximo a entrar nele não receba os avisos.
+  if (s.user && srv.estadoNotificacoes(s.user.uid) === 'ativo') {
+    await Promise.race([srv.desativarNotificacoes(s.user.uid), new Promise((r) => setTimeout(r, 3000))]);
+  }
+  srv.sair();
 });
 
 function semAcesso(msg) {
@@ -310,6 +315,7 @@ function abrirApp() {
   $$('[data-so-admin]').forEach((el) => { el.hidden = !ehAdmin(); });
   configurarEscopo();
   renderConta();
+  atualizarNotificacoes(true);
   mostrarTela('app');
   if (!jaAberto) mostrar('reunioes');
   assinarReunioes();
@@ -477,7 +483,7 @@ function renderLista() {
         <span>${esc(formatarData(r.data, { month: 'short' }).replace('.', ''))}</span>
       </div>
       <div class="item-corpo">
-        <div class="item-titulo">Lar de ${esc(r.responsavelLar)}</div>
+        <div class="item-titulo">Lar de ${esc(r.responsavelLar)}${emAndamento(r) ? ' <span class="tag andamento">🟢 Em andamento</span>' : ''}</div>
         <div class="item-meta">
           <span>🕐 ${esc(r.horaInicio)}${r.horaFim ? '–' + esc(r.horaFim) : ''}</span>
           <span>👤 ${esc(r.responsavelReuniao)}</span>
@@ -486,15 +492,14 @@ function renderLista() {
           ${deOutros && r.autorUid !== s.user.uid && r.autorNome !== r.responsavelReuniao ? `<span>✍️ ${esc(r.autorNome)}</span>` : ''}
         </div>
       </div>
-      <div class="item-numeros">
+      ${emAndamento(r) ? '<div class="item-numeros"><span class="encerrar-link">Encerrar ›</span></div>' : `<div class="item-numeros">
         <span><strong>${r.participantes}</strong> pessoas</span>
         <span title="Membros ${r.johreiMembros} · Frequentadores ${r.johreiFrequentadores} · 1ª vez ${r.johreiPrimeiraVez}"><strong>${totalJohrei(r)}</strong> Johreis</span>
-      </div>
+      </div>`}
     </li>`).join('') || '<li class="vazio">Nenhuma reunião neste período.</li>';
 
-  const podeRegistrar = ehAdmin() || Boolean(s.perfil.unidadeId);
-  $('#nova-reuniao').disabled = !podeRegistrar || (ehAdmin() && !s.unidades.length);
-  $('#nova-reuniao').title = podeRegistrar ? '' : 'Peça ao administrador para definir sua unidade.';
+  const podeRegistrar = (ehAdmin() || Boolean(s.perfil.unidadeId)) && !(ehAdmin() && !s.unidades.length);
+  ['#iniciar-reuniao', '#registrar-reuniao'].forEach((sel) => { $(sel).disabled = !podeRegistrar; });
 }
 
 const abrirItem = (e) => {
@@ -521,9 +526,38 @@ function preencherSugestoes() {
   $('#lista-enderecos').innerHTML = unicos('endereco');
 }
 
-function abrirFormulario(id = null) {
+// Modos do formulário:
+//   iniciar   – reunião começando agora (avisa supervisores e administradores)
+//   andamento – reunião iniciada, falta encerrar e preencher os números
+//   registrar – lançar uma reunião que já aconteceu (não avisa ninguém)
+//   editar    – corrigir uma reunião encerrada
+let modo = 'editar';
+const emAndamento = (r) => r.status === 'andamento';
+
+// O servidor só avisa se a data for hoje e o início estiver perto de agora (mesma regra de functions/aviso.js).
+function iniciadaAgora(f) {
+  if (f.data.value !== hoje() || !f.horaInicio.value) return false;
+  const minutos = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+  return Math.abs(minutos(f.horaInicio.value) - minutos(horaAtual())) <= 30;
+}
+
+function atualizarDica() {
+  const f = $('#form-reuniao');
+  const dica = $('#form-dica');
+  const textos = {
+    iniciar: iniciadaAgora(f)
+      ? '🔔 Ao iniciar, os supervisores da unidade e os administradores serão avisados.'
+      : 'Como a data ou o horário não são os de agora, ninguém será avisado.',
+    andamento: 'Reunião em andamento. Ao terminar, confira o horário de término e os números e toque em “Encerrar reunião”.',
+  };
+  dica.textContent = textos[modo] || '';
+  dica.hidden = !textos[modo];
+}
+
+function abrirFormulario(id = null, novoModo = 'registrar') {
   const f = $('#form-reuniao');
   editando = id ? s.reunioes.find((r) => r.id === id) : null;
+  modo = editando ? (emAndamento(editando) ? 'andamento' : 'editar') : novoModo;
   f.reset();
   f.unidadeId.innerHTML = s.unidades.map((u) => `<option value="${u.id}">${esc(u.nome)}</option>`).join('');
   $('#campo-unidade-form').hidden = !ehAdmin();
@@ -532,13 +566,23 @@ function abrirFormulario(id = null) {
     for (const c of CAMPOS_TEXTO) f[c].value = editando[c] || '';
     for (const c of CAMPOS_NUMERO) f[c].value = editando[c];
     f.unidadeId.value = editando.unidadeId;
+    if (modo === 'andamento' && !f.horaFim.value) f.horaFim.value = horaAtual();
   } else {
     f.data.value = hoje();
-    f.horaInicio.value = horaAtual();
+    if (modo === 'iniciar') f.horaInicio.value = horaAtual();
     f.responsavelReuniao.value = s.perfil.nome;
     f.unidadeId.value = s.perfil.unidadeId || ($('#filtro-unidade').value || s.unidades[0]?.id || '');
   }
-  $('#form-titulo').textContent = editando ? 'Editar reunião' : 'Nova reunião';
+
+  const titulos = { iniciar: 'Iniciar reunião', andamento: 'Reunião em andamento', registrar: 'Registrar reunião já realizada', editar: 'Editar reunião' };
+  $('#form-titulo').textContent = titulos[modo];
+  const soInicio = modo === 'iniciar';
+  ['#campo-hora-fim', '#painel-participacao', '#painel-observacoes'].forEach((sel) => { $(sel).hidden = soInicio; });
+  const salvar = $('#salvar');
+  salvar.textContent = { iniciar: '▶ Iniciar reunião', andamento: 'Salvar sem encerrar' }[modo] || 'Salvar reunião';
+  salvar.classList.toggle('primary', modo !== 'andamento');
+  $('#encerrar').hidden = modo !== 'andamento';
+
   $('#form-autor').textContent = editando && editando.autorUid !== s.user.uid
     ? `Registrada por ${editando.autorNome}${ehAdmin() ? ' · ' + nomeUnidade(editando.unidadeId) : ''}` : '';
   $('#excluir').hidden = !editando;
@@ -546,6 +590,7 @@ function abrirFormulario(id = null) {
   formAlterado = false;
   preencherSugestoes();
   atualizarTotalJohrei();
+  atualizarDica();
   mostrar('form');
 }
 
@@ -554,7 +599,8 @@ function atualizarTotalJohrei() {
   $('#total-johrei').textContent = num(f.johreiMembros.value) + num(f.johreiFrequentadores.value) + num(f.johreiPrimeiraVez.value);
 }
 
-$('#nova-reuniao').addEventListener('click', () => abrirFormulario());
+$('#iniciar-reuniao').addEventListener('click', () => abrirFormulario(null, 'iniciar'));
+$('#registrar-reuniao').addEventListener('click', () => abrirFormulario(null, 'registrar'));
 
 $('#cancelar').addEventListener('click', () => {
   if (formAlterado && !confirm('Descartar as alterações não salvas?')) return;
@@ -565,6 +611,7 @@ $('#cancelar').addEventListener('click', () => {
 $('#form-reuniao').addEventListener('input', () => {
   formAlterado = true;
   atualizarTotalJohrei();
+  atualizarDica();
 });
 
 $$('.stepper').forEach((st) => {
@@ -578,7 +625,7 @@ $$('.stepper').forEach((st) => {
   input.addEventListener('focus', () => input.select());
 });
 
-function validar(f) {
+function validar(f, encerrando) {
   for (const [campo, msg] of [
     ['data', 'Informe a data.'],
     ['horaInicio', 'Informe o horário de início.'],
@@ -587,7 +634,10 @@ function validar(f) {
   ]) {
     if (!f[campo].value.trim()) return [campo, msg];
   }
-  if (f.horaFim.value && f.horaFim.value <= f.horaInicio.value) return ['horaFim', 'O término deve ser depois do início.'];
+  if (encerrando && !f.horaFim.value) return ['horaFim', 'Informe o horário de término.'];
+  if (modo !== 'iniciar' && f.horaFim.value && f.horaFim.value <= f.horaInicio.value) {
+    return ['horaFim', 'O término deve ser depois do início.'];
+  }
   if (ehAdmin() && !editando && !f.unidadeId.value) return ['unidadeId', 'Escolha a unidade.'];
   return null;
 }
@@ -595,7 +645,8 @@ function validar(f) {
 $('#form-reuniao').addEventListener('submit', (e) => {
   e.preventDefault();
   const f = e.target;
-  const erro = validar(f);
+  const encerrando = e.submitter?.id === 'encerrar';
+  const erro = validar(f, encerrando);
   if (erro) {
     $('#form-erro').textContent = erro[1];
     f[erro[0]].focus();
@@ -604,6 +655,9 @@ $('#form-reuniao').addEventListener('submit', (e) => {
   const dados = {};
   for (const c of CAMPOS_TEXTO) dados[c] = f[c].value.trim();
   for (const c of CAMPOS_NUMERO) dados[c] = num(f[c].value);
+  if (modo === 'iniciar') dados.horaFim = '';
+  const status = modo === 'iniciar' || (modo === 'andamento' && !encerrando) ? 'andamento' : 'encerrada';
+  dados.status = status;
 
   let id;
   if (editando) {
@@ -622,7 +676,13 @@ $('#form-reuniao').addEventListener('submit', (e) => {
   // Sem esperar o servidor: funciona offline e é enviado quando a internet voltar.
   srv.salvarReuniao(id, dados).catch((err) => toast('A reunião não foi salva: ' + mensagemErro(err)));
   formAlterado = false;
-  toast(editando ? 'Reunião atualizada.' : 'Reunião registrada.');
+  const mensagens = {
+    iniciar: iniciadaAgora(f) ? 'Reunião iniciada. Supervisores e administradores serão avisados.' : 'Reunião iniciada.',
+    andamento: encerrando ? 'Reunião encerrada.' : 'Alterações salvas.',
+    registrar: 'Reunião registrada.',
+    editar: 'Reunião atualizada.',
+  };
+  toast(mensagens[modo]);
   if (dados.data < $('#de').value || dados.data > $('#ate').value) {
     $('#de').value = dados.data.slice(0, 8) + '01';
     const [a, m] = dados.data.split('-').map(Number);
@@ -651,12 +711,13 @@ $('#exportar-csv').addEventListener('click', () => {
   const lista = reunioesFiltradas().slice().reverse();
   if (!lista.length) return toast('Nenhuma reunião neste período.');
   const cab = ['Unidade', 'Data', 'Início', 'Término', 'Responsável pela reunião', 'Responsável pelo lar', 'Endereço',
-    'Participantes', 'Johrei Membros', 'Johrei Frequentadores', 'Johrei 1ª vez', 'Johrei Total', 'Observações', 'Registrado por'];
+    'Participantes', 'Johrei Membros', 'Johrei Frequentadores', 'Johrei 1ª vez', 'Johrei Total', 'Observações', 'Registrado por', 'Situação'];
   const cel = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const linhas = lista.map((r) => [
     nomeUnidade(r.unidadeId), formatarData(r.data), r.horaInicio, r.horaFim,
     r.responsavelReuniao, r.responsavelLar, r.endereco, r.participantes,
     r.johreiMembros, r.johreiFrequentadores, r.johreiPrimeiraVez, totalJohrei(r), r.observacoes, r.autorNome,
+    emAndamento(r) ? 'Em andamento' : 'Encerrada',
   ].map(cel).join(';'));
   const { de, ate } = filtroAtual();
   // BOM + ";" para o Excel em português abrir com acentos e colunas corretas.
@@ -684,7 +745,7 @@ $('#imprimir-relatorio').addEventListener('click', () => {
       ${lista.map((r) => `<tr>
         <td>${esc(formatarData(r.data, { day: '2-digit', month: '2-digit' }))}</td>
         <td>${esc(r.horaInicio)}${r.horaFim ? '–' + esc(r.horaFim) : ''}</td>
-        <td>${esc(r.responsavelLar)}${r.endereco ? `<br><small>${esc(r.endereco)}</small>` : ''}</td>
+        <td>${esc(r.responsavelLar)}${emAndamento(r) ? ' <em>(em andamento)</em>' : ''}${r.endereco ? `<br><small>${esc(r.endereco)}</small>` : ''}</td>
         <td>${esc(r.responsavelReuniao)}</td>
         <td>${r.participantes}</td><td>${r.johreiMembros}</td><td>${r.johreiFrequentadores}</td><td>${r.johreiPrimeiraVez}</td>
         <td class="obs">${esc(r.observacoes)}</td>
@@ -824,6 +885,81 @@ $('#lista-unidades').addEventListener('click', async (e) => {
   } catch (err) {
     toast(mensagemErro(err));
   }
+});
+
+// ---------- Notificações ----------
+
+const recebeAvisos = () => ehAdmin() || ehSupervisor();
+const chaveDispensa = () => `immb-dispensou-notificacoes-${s.user.uid}`;
+const ehIphoneNoNavegador = () => /iPhone|iPad/.test(navigator.userAgent)
+  && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone;
+
+function dispensouAviso() {
+  try { return localStorage.getItem(chaveDispensa()) === '1'; } catch { return false; }
+}
+
+async function atualizarNotificacoes(renovar = false) {
+  const painel = $('#painel-notificacoes');
+  const aviso = $('#aviso-notificacoes');
+  if (!srv.NOTIFICACOES_CONFIGURADAS || !recebeAvisos()) {
+    painel.hidden = true;
+    aviso.hidden = true;
+    return;
+  }
+  const suportado = await srv.notificacoesSuportadas();
+  const estado = srv.estadoNotificacoes(s.user.uid);
+  const textos = {
+    ativo: '✅ Ativadas neste aparelho. Você será avisado quando uma reunião começar.',
+    inativo: 'Desativadas neste aparelho.',
+    negado: 'As notificações estão bloqueadas neste navegador. Libere nas permissões do site (ícone ao lado do endereço) e toque em “Ativar” de novo.',
+  };
+  let texto = textos[estado];
+  if (!suportado) {
+    texto = ehIphoneNoNavegador()
+      ? 'No iPhone, instale o app na tela inicial (Compartilhar → Adicionar à Tela de Início), abra por lá e ative as notificações.'
+      : 'Este navegador não permite notificações. No celular, use o Chrome (Android) ou instale o app na tela inicial (iPhone).';
+  }
+  $('#notificacoes-estado').textContent = texto;
+  $('#botao-ativar-notificacoes').hidden = !suportado || estado === 'ativo';
+  $('#desativar-notificacoes').hidden = !suportado || estado !== 'ativo';
+  painel.hidden = false;
+
+  const mostrarAviso = (suportado && estado === 'inativo') || (!suportado && ehIphoneNoNavegador());
+  aviso.hidden = !mostrarAviso || dispensouAviso();
+  $('#aviso-notificacoes-texto').textContent = suportado
+    ? 'Ative as notificações neste aparelho para saber na hora quando uma reunião começar.'
+    : texto;
+  $('[data-acao=ativar-notificacoes]', aviso).hidden = !suportado;
+
+  // O endereço do aparelho pode mudar com o tempo: renova o registro ao abrir o app.
+  if (renovar && suportado && estado === 'ativo') srv.ativarNotificacoes(s.user.uid).catch(() => {});
+}
+
+$$('[data-acao=ativar-notificacoes]').forEach((b) => b.addEventListener('click', async () => {
+  b.disabled = true;
+  try {
+    await srv.ativarNotificacoes(s.user.uid);
+    toast('Notificações ativadas neste aparelho.');
+  } catch (err) {
+    toast(err.code === 'notificacao/negada'
+      ? 'Você não permitiu as notificações. Dá para liberar nas permissões do site.'
+      : 'Não foi possível ativar as notificações. ' + mensagemErro(err));
+  } finally {
+    b.disabled = false;
+    atualizarNotificacoes();
+  }
+}));
+
+$('#desativar-notificacoes').addEventListener('click', async () => {
+  await srv.desativarNotificacoes(s.user.uid);
+  toast('Notificações desativadas neste aparelho.');
+  atualizarNotificacoes();
+});
+
+$('#dispensar-notificacoes').addEventListener('click', () => {
+  try { localStorage.setItem(chaveDispensa(), '1'); } catch { /* sem armazenamento */ }
+  $('#aviso-notificacoes').hidden = true;
+  toast('Você pode ativar depois em “Minha conta”.');
 });
 
 // ---------- Minha conta ----------

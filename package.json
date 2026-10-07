@@ -4,7 +4,7 @@
   "description": "Apps da IMMB",
   "scripts": {
     "dev": "firebase emulators:start --project demo-immb",
-    "test": "firebase emulators:exec --only firestore --project demo-immb \"node --test tests/*.test.mjs\"",
+    "test": "firebase emulators:exec --only firestore --project demo-immb \"node --test tests/*.test.mjs functions/*.test.js\"",
     "deploy": "firebase deploy --only hosting,firestore",
     "demo:admin": "node scripts/convidar-admin-demo.mjs"
   },

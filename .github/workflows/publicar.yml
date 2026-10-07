@@ -13,6 +13,7 @@ on:
       - 'firebase.json'
       - 'scripts/**'
       - 'tests/**'
+      - 'functions/**'
       - '.github/workflows/publicar.yml'
   workflow_dispatch:
 
@@ -23,6 +24,9 @@ concurrency:
 jobs:
   publicar:
     runs-on: ubuntu-latest
+    env:
+      # "sim" depois que o projeto estiver no plano Blaze (exigido pelas Cloud Functions).
+      PUBLICAR_FUNCOES: nao
     steps:
       - uses: actions/checkout@v5
 
@@ -38,6 +42,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm ci --prefix functions
+
       - name: Testar as regras de segurança
         run: npm test
 
@@ -50,7 +56,10 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/chave.json" >> "$GITHUB_ENV"
 
       - name: Publicar no Firebase
-        run: npx firebase deploy --only hosting,firestore --project immb-reunioes --non-interactive --force
+        run: |
+          ALVOS=hosting,firestore
+          if [ "$PUBLICAR_FUNCOES" = sim ]; then ALVOS="$ALVOS,functions"; fi
+          npx firebase deploy --only "$ALVOS" --project immb-reunioes --non-interactive --force
 
       - name: Cadastrar o primeiro administrador
         run: node scripts/primeiro-admin.mjs "${{ vars.ADMIN_EMAIL || 'mamerlin@gmail.com' }}" "${{ vars.ADMIN_NOME || 'Marco Merlin' }}"

@@ -119,6 +119,18 @@ export function observarReunioes(filtro, cb, erro) {
   return onSnapshot(q, { includeMetadataChanges: true }, (s) => cb(lista(s), s.metadata.hasPendingWrites), erro);
 }
 
+// Reuniões em andamento numa data (opcionalmente de uma unidade). Chama cb só com
+// as que chegaram de outros aparelhos desde a última leitura.
+export function observarReunioesIniciadas({ data, unidadeId }, cb, erro) {
+  const condicoes = [where('status', '==', 'andamento'), where('data', '==', data)];
+  if (unidadeId) condicoes.unshift(where('unidadeId', '==', unidadeId));
+  return onSnapshot(query(collection(db, 'reunioes'), ...condicoes), (snap) => {
+    cb(snap.docChanges()
+      .filter((c) => c.type === 'added' && !c.doc.metadata.hasPendingWrites)
+      .map((c) => ({ id: c.doc.id, ...c.doc.data() })));
+  }, erro);
+}
+
 export const novoIdReuniao = () => doc(collection(db, 'reunioes')).id;
 
 // Não espere estas promessas para seguir em frente: sem internet elas só

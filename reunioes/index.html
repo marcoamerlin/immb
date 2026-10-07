@@ -115,6 +115,8 @@
     </header>
 
     <main>
+      <div id="alertas" class="alertas" aria-live="assertive"></div>
+
       <!-- Lista + resumo -->
       <section id="view-reunioes" class="view">
         <div class="filtros panel">
@@ -144,10 +146,10 @@
         <div class="resumo" id="resumo"></div>
 
         <div id="aviso-notificacoes" class="panel aviso" hidden>
-          <p><strong>🔔 Receba um aviso quando uma reunião começar.</strong><br>
-            <span class="hint" id="aviso-notificacoes-texto">Ative as notificações neste aparelho para saber na hora quando alguém da sua unidade iniciar uma reunião.</span></p>
+          <p><strong>🔔 Receba um alerta quando uma reunião começar.</strong><br>
+            <span class="hint">Com o app aberto (mesmo minimizado), você é avisado na hora, com som, quando alguém iniciar uma reunião.</span></p>
           <div class="toolbar">
-            <button type="button" class="primary" data-acao="ativar-notificacoes">Ativar notificações</button>
+            <button type="button" class="primary" data-acao="ativar-notificacoes">Ativar alertas</button>
             <button type="button" class="link" id="dispensar-notificacoes">Agora não</button>
           </div>
         </div>
@@ -320,10 +322,10 @@
           </form>
         </div>
         <div class="panel" id="painel-notificacoes" hidden>
-          <h3>Notificações</h3>
+          <h3>Alertas de reunião iniciada</h3>
           <p id="notificacoes-estado"></p>
           <div class="toolbar">
-            <button type="button" class="primary" data-acao="ativar-notificacoes" id="botao-ativar-notificacoes">Ativar notificações neste aparelho</button>
+            <button type="button" class="primary" data-acao="ativar-notificacoes" id="botao-ativar-notificacoes">Ativar alertas neste aparelho</button>
             <button type="button" id="desativar-notificacoes" hidden>Desativar neste aparelho</button>
           </div>
         </div>

@@ -10,6 +10,19 @@ App para registrar as reuniões realizadas no lar de membros da Igreja Messiâni
 - Johreis ministrados para **Membros**, **Frequentadores** e **1ª vez** (com o total)
 - Observações
 
+## Iniciar, encerrar ou registrar
+
+- **▶ Iniciar reunião:** ao chegar no lar. A data e a hora de início vêm preenchidas (podem ser alteradas). A reunião fica **🟢 Em andamento**.
+- **■ Encerrar reunião:** ao terminar, tocando na reunião em andamento. A hora de término vem preenchida, e aí se completam os números e as observações.
+- **+ Registrar reunião já realizada:** para lançar uma reunião esquecida, com todos os campos de uma vez.
+
+## Alertas de reunião iniciada
+
+Supervisores (da unidade) e administradores recebem um alerta quando alguém **inicia** uma reunião naquele momento (data de hoje e início a até 30 minutos do horário atual). Lançamentos atrasados não geram alerta, e quem iniciou não recebe o próprio alerta.
+
+- **Versão atual (gratuita):** o alerta chega com o **app aberto**, mesmo minimizado: aparece na tela e, se os alertas estiverem ativados em *Minha conta*, também como notificação do sistema, com som. Com o app fechado, não chega.
+- **Aviso com o app fechado:** já está programado em [`functions/`](../functions), mas desligado. Exige o plano **Blaze** do Firebase, a chave "Certificados push da Web" em `config.js` (`VAPID_KEY`) e `PUBLICAR_FUNCOES: sim` na automação de publicação.
+
 ## Perfis de acesso
 
 | Perfil | O que pode fazer |

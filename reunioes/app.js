@@ -316,6 +316,7 @@ function abrirApp() {
   configurarEscopo();
   renderConta();
   atualizarNotificacoes(true);
+  vigiarReunioesIniciadas();
   mostrarTela('app');
   if (!jaAberto) mostrar('reunioes');
   assinarReunioes();
@@ -534,12 +535,14 @@ function preencherSugestoes() {
 let modo = 'editar';
 const emAndamento = (r) => r.status === 'andamento';
 
-// O servidor só avisa se a data for hoje e o início estiver perto de agora (mesma regra de functions/aviso.js).
-function iniciadaAgora(f) {
-  if (f.data.value !== hoje() || !f.horaInicio.value) return false;
+// Só há aviso se a data for hoje e o início estiver a até 30 minutos de agora
+// (mesma regra de functions/aviso.js).
+function comecouAgora(data, horaInicio) {
+  if (data !== hoje() || !horaInicio) return false;
   const minutos = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
-  return Math.abs(minutos(f.horaInicio.value) - minutos(horaAtual())) <= 30;
+  return Math.abs(minutos(horaInicio) - minutos(horaAtual())) <= 30;
 }
+const iniciadaAgora = (f) => comecouAgora(f.data.value, f.horaInicio.value);
 
 function atualizarDica() {
   const f = $('#form-reuniao');
@@ -887,63 +890,77 @@ $('#lista-unidades').addEventListener('click', async (e) => {
   }
 });
 
-// ---------- Notificações ----------
+// ---------- Alertas de reunião iniciada ----------
+// Com o app aberto (mesmo minimizado), supervisores e administradores recebem um
+// alerta quando alguém inicia uma reunião naquele momento. Se o aviso pelo servidor
+// estiver ligado (plano Blaze, ver functions/), o aparelho também é registrado para
+// receber avisos com o app fechado.
 
 const recebeAvisos = () => ehAdmin() || ehSupervisor();
 const chaveDispensa = () => `immb-dispensou-notificacoes-${s.user.uid}`;
+const chaveDesligados = () => `immb-alertas-desligados-${s.user.uid}`;
 const ehIphoneNoNavegador = () => /iPhone|iPad/.test(navigator.userAgent)
   && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone;
+const alertaDoSistemaDisponivel = () => 'Notification' in window && 'serviceWorker' in navigator;
 
-function dispensouAviso() {
-  try { return localStorage.getItem(chaveDispensa()) === '1'; } catch { return false; }
+function lerLocal(chave) {
+  try { return localStorage.getItem(chave); } catch { return null; }
+}
+function gravarLocal(chave, valor) {
+  try { if (valor) localStorage.setItem(chave, valor); else localStorage.removeItem(chave); } catch { /* sem armazenamento */ }
 }
 
-async function atualizarNotificacoes(renovar = false) {
+// 'ativo' | 'inativo' | 'negado' | 'so-no-app' (navegador sem alertas do sistema)
+function estadoAlertas() {
+  if (lerLocal(chaveDesligados())) return 'inativo';
+  if (!alertaDoSistemaDisponivel()) return 'so-no-app';
+  return { granted: 'ativo', denied: 'negado' }[Notification.permission] || 'inativo';
+}
+
+function atualizarNotificacoes(renovar = false) {
   const painel = $('#painel-notificacoes');
   const aviso = $('#aviso-notificacoes');
-  if (!srv.NOTIFICACOES_CONFIGURADAS || !recebeAvisos()) {
+  if (!recebeAvisos()) {
     painel.hidden = true;
     aviso.hidden = true;
     return;
   }
-  const suportado = await srv.notificacoesSuportadas();
-  const estado = srv.estadoNotificacoes(s.user.uid);
+  const estado = estadoAlertas();
   const textos = {
-    ativo: '✅ Ativadas neste aparelho. Você será avisado quando uma reunião começar.',
-    inativo: 'Desativadas neste aparelho.',
-    negado: 'As notificações estão bloqueadas neste navegador. Libere nas permissões do site (ícone ao lado do endereço) e toque em “Ativar” de novo.',
+    ativo: '✅ Alertas ativados neste aparelho. Com o app aberto (mesmo minimizado), você recebe um alerta quando uma reunião começar.',
+    inativo: 'Alertas desativados neste aparelho. Ative para receber um alerta, com som, quando uma reunião começar.',
+    negado: 'Os alertas estão bloqueados neste navegador. Libere as notificações nas permissões do site (ícone ao lado do endereço) e toque em “Ativar” de novo.',
+    'so-no-app': ehIphoneNoNavegador()
+      ? 'Neste iPhone, os alertas aparecem só dentro do app, com ele aberto na tela. Instalando o app na tela inicial (Compartilhar → Adicionar à Tela de Início), dá para receber alertas com som.'
+      : 'Neste navegador, os alertas aparecem só dentro do app, com ele aberto na tela.',
   };
-  let texto = textos[estado];
-  if (!suportado) {
-    texto = ehIphoneNoNavegador()
-      ? 'No iPhone, instale o app na tela inicial (Compartilhar → Adicionar à Tela de Início), abra por lá e ative as notificações.'
-      : 'Este navegador não permite notificações. No celular, use o Chrome (Android) ou instale o app na tela inicial (iPhone).';
-  }
-  $('#notificacoes-estado').textContent = texto;
-  $('#botao-ativar-notificacoes').hidden = !suportado || estado === 'ativo';
-  $('#desativar-notificacoes').hidden = !suportado || estado !== 'ativo';
+  $('#notificacoes-estado').textContent = textos[estado]
+    + (srv.NOTIFICACOES_CONFIGURADAS ? '' : ' Com o app fechado, os alertas não chegam.');
+  $('#botao-ativar-notificacoes').hidden = !['inativo', 'negado'].includes(estado);
+  $('#desativar-notificacoes').hidden = estado !== 'ativo';
   painel.hidden = false;
 
-  const mostrarAviso = (suportado && estado === 'inativo') || (!suportado && ehIphoneNoNavegador());
-  aviso.hidden = !mostrarAviso || dispensouAviso();
-  $('#aviso-notificacoes-texto').textContent = suportado
-    ? 'Ative as notificações neste aparelho para saber na hora quando uma reunião começar.'
-    : texto;
-  $('[data-acao=ativar-notificacoes]', aviso).hidden = !suportado;
+  aviso.hidden = estado !== 'inativo' || Boolean(lerLocal(chaveDesligados())) || Boolean(lerLocal(chaveDispensa()));
 
-  // O endereço do aparelho pode mudar com o tempo: renova o registro ao abrir o app.
-  if (renovar && suportado && estado === 'ativo') srv.ativarNotificacoes(s.user.uid).catch(() => {});
+  // O registro do aparelho no servidor pode mudar com o tempo: renova ao abrir o app.
+  if (renovar && estado === 'ativo' && srv.NOTIFICACOES_CONFIGURADAS) {
+    srv.notificacoesSuportadas().then((ok) => ok && srv.ativarNotificacoes(s.user.uid)).catch(() => {});
+  }
 }
 
 $$('[data-acao=ativar-notificacoes]').forEach((b) => b.addEventListener('click', async () => {
   b.disabled = true;
+  gravarLocal(chaveDesligados(), null);
   try {
-    await srv.ativarNotificacoes(s.user.uid);
-    toast('Notificações ativadas neste aparelho.');
+    if (alertaDoSistemaDisponivel() && Notification.permission !== 'granted') await Notification.requestPermission();
+    if (estadoAlertas() === 'negado') {
+      toast('Você não permitiu os alertas. Dá para liberar nas permissões do site.');
+    } else {
+      toast('Alertas ativados neste aparelho.');
+      if (srv.NOTIFICACOES_CONFIGURADAS && await srv.notificacoesSuportadas()) await srv.ativarNotificacoes(s.user.uid);
+    }
   } catch (err) {
-    toast(err.code === 'notificacao/negada'
-      ? 'Você não permitiu as notificações. Dá para liberar nas permissões do site.'
-      : 'Não foi possível ativar as notificações. ' + mensagemErro(err));
+    toast('Não foi possível ativar os alertas. ' + mensagemErro(err));
   } finally {
     b.disabled = false;
     atualizarNotificacoes();
@@ -951,16 +968,63 @@ $$('[data-acao=ativar-notificacoes]').forEach((b) => b.addEventListener('click',
 }));
 
 $('#desativar-notificacoes').addEventListener('click', async () => {
-  await srv.desativarNotificacoes(s.user.uid);
-  toast('Notificações desativadas neste aparelho.');
+  gravarLocal(chaveDesligados(), '1');
+  if (srv.NOTIFICACOES_CONFIGURADAS) await srv.desativarNotificacoes(s.user.uid);
+  toast('Alertas desativados neste aparelho.');
   atualizarNotificacoes();
 });
 
 $('#dispensar-notificacoes').addEventListener('click', () => {
-  try { localStorage.setItem(chaveDispensa(), '1'); } catch { /* sem armazenamento */ }
+  gravarLocal(chaveDispensa(), '1');
   $('#aviso-notificacoes').hidden = true;
   toast('Você pode ativar depois em “Minha conta”.');
 });
+
+// Fica de olho nas reuniões em andamento de hoje (da unidade, para o supervisor;
+// de todas, para o administrador) e alerta quando surge uma nova, iniciada agora.
+let diaVigiado = null;
+
+function vigiarReunioesIniciadas() {
+  cancelar('iniciadas');
+  if (!recebeAvisos() || (ehSupervisor() && !s.perfil.unidadeId)) return;
+  diaVigiado = hoje();
+  let primeiraLeitura = true;
+  s.assinaturas.iniciadas = srv.observarReunioesIniciadas(
+    { data: diaVigiado, unidadeId: ehSupervisor() ? s.perfil.unidadeId : null },
+    (novas) => {
+      // A primeira leitura traz as que já estavam em andamento: não alerta.
+      if (primeiraLeitura) { primeiraLeitura = false; return; }
+      novas.filter((r) => r.autorUid !== s.user.uid && comecouAgora(r.data, r.horaInicio)).forEach(alertarReuniao);
+    },
+    (err) => console.warn('Alertas de reunião indisponíveis', err),
+  );
+}
+
+// Passou da meia-noite com o app aberto: passa a vigiar o novo dia.
+setInterval(() => {
+  if (s.assinaturas.iniciadas && diaVigiado !== hoje()) vigiarReunioesIniciadas();
+}, 60 * 1000);
+
+function alertarReuniao(r) {
+  const titulo = `Reunião iniciada no lar de ${r.responsavelLar}`;
+  const corpo = [r.horaInicio, `por ${r.responsavelReuniao}`, ehAdmin() ? nomeUnidade(r.unidadeId) : '']
+    .filter(Boolean).join(' · ');
+
+  const alerta = document.createElement('div');
+  alerta.className = 'alerta';
+  alerta.setAttribute('role', 'alert');
+  alerta.innerHTML = `<span>🟢 <strong>${esc(titulo)}</strong><br><small>${esc(corpo)}</small></span>
+    <button type="button" aria-label="Fechar alerta">✕</button>`;
+  $('button', alerta).addEventListener('click', () => alerta.remove());
+  $('#alertas').prepend(alerta);
+  toast(`🟢 ${titulo}`);
+
+  if (estadoAlertas() === 'ativo') {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(titulo, { body: corpo, icon: 'icon-192.png', tag: r.id, data: { url: './' } }))
+      .catch(() => {});
+  }
+}
 
 // ---------- Minha conta ----------
 

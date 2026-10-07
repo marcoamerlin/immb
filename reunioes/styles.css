@@ -133,6 +133,12 @@ label input, label select { color: var(--texto); font-size: 1rem; width: 100%; }
 .titulo-lista { margin: 0 0 8px; }
 .tag.andamento { background: #e3f4e6; color: #1e6b2c; font-weight: 600; }
 .encerrar-link { color: var(--azul); font-weight: 600; font-size: .9rem; }
+.alertas { display: flex; flex-direction: column; gap: 8px; }
+.alertas:not(:empty) { margin-bottom: 16px; }
+.alerta { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #e3f4e6; color: #1e4d27;
+  border: 1px solid #8fcf9b; border-radius: 12px; padding: 12px 14px; animation: chegar .3s ease-out; }
+.alerta button { border: none; background: none; min-height: 36px; color: inherit; }
+@keyframes chegar { from { transform: translateY(-8px); opacity: 0; } }
 .aviso { border-color: var(--azul); background: var(--azul-claro); }
 .aviso p { margin: 0 0 8px; }
 .aviso .toolbar { margin: 0; }

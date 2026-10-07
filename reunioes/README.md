@@ -43,29 +43,30 @@ Abra o endereço do app no navegador:
 - **Android (Chrome):** menu ⋮ → *Adicionar à tela inicial*.
 - **iPhone (Safari):** botão Compartilhar → *Adicionar à Tela de Início*.
 
-## Colocar no ar (uma vez só)
+## Onde está publicado
 
-O app usa o [Firebase](https://firebase.google.com) (Google) para login e banco de dados. O plano gratuito (Spark) é suficiente para o volume de uma ou algumas unidades.
+- **Endereço do app:** https://immb-reunioes.web.app
+- **Projeto Firebase:** `immb-reunioes` (plano gratuito Spark), em https://console.firebase.google.com/project/immb-reunioes
 
-1. **Criar o projeto:** em <https://console.firebase.google.com>, clique em *Criar projeto* (ex.: `immb-reunioes`). O Google Analytics não é necessário.
-2. **Login:** *Authentication → Começar → Método de login →* ative **E-mail/senha** (só a primeira opção; não precisa do "link do e-mail").
-   Em *Authentication → Modelos*, mude o idioma dos e-mails para **Português**.
-3. **Banco de dados:** *Firestore Database → Criar banco de dados →* modo de **produção**, local `southamerica-east1 (São Paulo)`.
-4. **Configuração do app:** *Configurações do projeto → Seus apps →* ícone **Web** (`</>`) → registre o app → copie os valores de `firebaseConfig` para o arquivo [`config.js`](config.js).
-5. **Publicar:** no computador, com [Node.js](https://nodejs.org) instalado, na pasta do repositório:
-   ```sh
-   npm install
-   npx firebase login
-   npx firebase use --add        # escolha o projeto criado
-   npm run deploy                # publica o site, as regras de segurança e os índices
-   ```
-   O app fica disponível em `https://<seu-projeto>.web.app`.
-6. **Primeiro administrador** (você): no console, em *Firestore Database → Iniciar coleção*:
-   - ID da coleção: `convites`
-   - ID do documento: **seu e-mail em letras minúsculas**
-   - Campos: `nome` (string, seu nome), `email` (string, o mesmo e-mail), `papel` (string, `admin`), `unidadeId` (null), `criadoEm` (string, pode ficar vazio)
+### Publicação automática
 
-   Depois abra o app, faça o **Primeiro acesso** com esse e-mail e, em **Administração**, cadastre a unidade **Johrei Center Aricanduva** (já vem sugerida). A partir daí, todo o resto é feito pelo app.
+Toda mudança enviada ao GitHub (nos branches `main` ou de desenvolvimento) é publicada sozinha pela automação [`.github/workflows/publicar.yml`](../.github/workflows/publicar.yml). Ela:
+1. Testa as regras de segurança.
+2. Publica o site, as regras e os índices do banco.
+3. Cadastra o primeiro administrador, se ainda não existir.
+
+Para funcionar, o repositório precisa de:
+- **Secret `FIREBASE_SERVICE_ACCOUNT`:** conteúdo do arquivo JSON gerado em *Firebase → Configurações do projeto → Contas de serviço → Gerar nova chave privada*.
+- **Variáveis `ADMIN_EMAIL` e `ADMIN_NOME`** (opcionais): usadas para criar o convite do primeiro administrador.
+
+Também dá para publicar manualmente: rode `npm install`, `npx firebase login` e `npm run deploy`.
+
+### Como o projeto foi configurado no Firebase
+
+1. Projeto criado em <https://console.firebase.google.com>, sem Google Analytics.
+2. **Authentication:** método **E-mail/senha** ativado (sem link do e-mail) e modelos de e-mail em português.
+3. **Firestore:** banco `(default)` em `southamerica-east1 (São Paulo)`, modo produção.
+4. **App da Web** registrado, com a configuração copiada para [`config.js`](config.js).
 
 ### Limites do plano gratuito
 

@@ -1,0 +1,14 @@
+{
+  "name": "Reuniões IMMB",
+  "short_name": "Reuniões",
+  "description": "Organização de reuniões da Igreja Messiânica Mundial do Brasil: pauta, presença, ata e encaminhamentos.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#1f5c99",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

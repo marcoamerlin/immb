@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f5c99">
+  <title>Reuniões IMMB</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="32" height="32">
+      <div>
+        <strong>Reuniões IMMB</strong>
+        <small>Igreja Messiânica Mundial do Brasil</small>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="reunioes" aria-selected="true">Reuniões</button>
+      <button role="tab" data-view="membros">Membros</button>
+      <button role="tab" data-view="dados">Dados</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Lista de reuniões -->
+    <section id="view-reunioes" class="view">
+      <div class="toolbar">
+        <input type="search" id="busca" placeholder="Buscar reunião…" aria-label="Buscar reunião">
+        <select id="filtro-tipo" aria-label="Filtrar por tipo"></select>
+        <button class="primary" id="nova-reuniao">+ Nova reunião</button>
+      </div>
+      <h2>Próximas</h2>
+      <ul id="lista-proximas" class="cards"></ul>
+      <h2>Realizadas</h2>
+      <ul id="lista-realizadas" class="cards"></ul>
+    </section>
+
+    <!-- Detalhe / edição de reunião -->
+    <section id="view-reuniao" class="view" hidden>
+      <div class="toolbar">
+        <button id="voltar">← Voltar</button>
+        <span class="spacer"></span>
+        <button id="imprimir">Imprimir ata</button>
+        <button class="danger" id="excluir-reuniao">Excluir</button>
+      </div>
+
+      <form id="form-reuniao" class="panel">
+        <div class="grid">
+          <label>Título
+            <input name="titulo" required placeholder="Ex.: Culto Mensal de Outubro">
+          </label>
+          <label>Tipo
+            <select name="tipo"></select>
+          </label>
+          <label>Data
+            <input type="date" name="data" required>
+          </label>
+          <label>Horário
+            <input type="time" name="hora">
+          </label>
+          <label>Local
+            <input name="local" placeholder="Ex.: Johrei Center">
+          </label>
+          <label>Responsável / Dirigente
+            <input name="responsavel" list="membros-datalist" placeholder="Nome">
+          </label>
+        </div>
+        <datalist id="membros-datalist"></datalist>
+      </form>
+
+      <div class="panel">
+        <h3>Pauta</h3>
+        <ol id="pauta" class="pauta"></ol>
+        <form id="form-pauta" class="inline">
+          <input name="item" placeholder="Novo item da pauta (ex.: Oração inicial, Leitura do Ensinamento…)" required>
+          <input name="duracao" type="number" min="0" step="5" placeholder="min" aria-label="Duração em minutos">
+          <button>Adicionar</button>
+        </form>
+        <p class="hint" id="pauta-total"></p>
+        <button type="button" id="pauta-modelo" class="link">Usar pauta modelo para este tipo</button>
+      </div>
+
+      <div class="panel">
+        <h3>Presença <span id="presenca-contagem" class="badge"></span></h3>
+        <div class="toolbar small">
+          <input type="search" id="busca-presenca" placeholder="Filtrar membros…" aria-label="Filtrar membros">
+          <button type="button" id="marcar-todos">Marcar todos</button>
+          <button type="button" id="desmarcar-todos">Limpar</button>
+        </div>
+        <ul id="presenca" class="presenca"></ul>
+        <form id="form-visitante" class="inline">
+          <input name="nome" placeholder="Visitante / frequentador (nome)" required>
+          <button>Adicionar visitante</button>
+        </form>
+        <ul id="visitantes" class="chips"></ul>
+      </div>
+
+      <div class="panel">
+        <h3>Ata / Anotações</h3>
+        <textarea id="ata" rows="8" placeholder="Registre aqui os principais pontos, testemunhos, avisos e decisões…"></textarea>
+      </div>
+
+      <div class="panel">
+        <h3>Encaminhamentos</h3>
+        <ul id="tarefas" class="tarefas"></ul>
+        <form id="form-tarefa" class="inline">
+          <input name="descricao" placeholder="O que será feito" required>
+          <input name="quem" list="membros-datalist" placeholder="Quem">
+          <input name="prazo" type="date" aria-label="Prazo">
+          <button>Adicionar</button>
+        </form>
+      </div>
+      <p class="hint" id="salvo-em"></p>
+    </section>
+
+    <!-- Membros -->
+    <section id="view-membros" class="view" hidden>
+      <form id="form-membro" class="panel inline">
+        <input name="nome" placeholder="Nome" required>
+        <input name="funcao" placeholder="Função (ex.: Ministro, Missionário, Membro)">
+        <input name="telefone" type="tel" placeholder="Telefone">
+        <button class="primary">Adicionar membro</button>
+      </form>
+      <input type="search" id="busca-membro" placeholder="Buscar membro…" aria-label="Buscar membro">
+      <table class="tabela">
+        <thead><tr><th>Nome</th><th>Função</th><th>Telefone</th><th>Presenças</th><th></th></tr></thead>
+        <tbody id="lista-membros"></tbody>
+      </table>
+    </section>
+
+    <!-- Dados -->
+    <section id="view-dados" class="view" hidden>
+      <div class="panel">
+        <h3>Backup</h3>
+        <p>Os dados ficam salvos apenas neste aparelho/navegador. Faça backups regularmente e use-os para transferir os dados para outro aparelho.</p>
+        <div class="toolbar">
+          <button class="primary" id="exportar">Exportar backup (.json)</button>
+          <label class="button">Importar backup
+            <input type="file" id="importar" accept="application/json,.json" hidden>
+          </label>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Tipos de reunião</h3>
+        <ul id="lista-tipos" class="chips"></ul>
+        <form id="form-tipo" class="inline">
+          <input name="nome" placeholder="Novo tipo de reunião" required>
+          <button>Adicionar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <article id="impressao"></article>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

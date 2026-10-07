@@ -1,0 +1,60 @@
+name: Publicar app
+
+# Publica o app (site, regras de segurança e índices) no Firebase sempre que
+# houver mudanças. Precisa do secret FIREBASE_SERVICE_ACCOUNT (chave JSON da
+# conta de serviço do projeto) e, opcionalmente, da variável ADMIN_EMAIL.
+on:
+  push:
+    branches: [main, claude/ecstatic-thompson-ic3d09]
+    paths:
+      - 'reunioes/**'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/publicar.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Testar as regras de segurança
+        run: npm test
+
+      - name: Preparar credenciais
+        env:
+          CHAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$CHAVE" ]; then echo "::error::Falta o secret FIREBASE_SERVICE_ACCOUNT"; exit 1; fi
+          printf '%s' "$CHAVE" > "$RUNNER_TEMP/chave.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/chave.json" >> "$GITHUB_ENV"
+
+      - name: Publicar no Firebase
+        run: npx firebase deploy --only hosting,firestore --project immb-reunioes --non-interactive --force
+
+      - name: Cadastrar o primeiro administrador
+        run: node scripts/primeiro-admin.mjs "${{ vars.ADMIN_EMAIL }}" "${{ vars.ADMIN_NOME }}"
+
+      - name: Apagar credenciais
+        if: always()
+        run: rm -f "$RUNNER_TEMP/chave.json"

@@ -1,6 +1,6 @@
 // Cache para o app abrir sem internet. Os dados (Firestore) têm cache próprio.
-const CACHE = 'immb-reunioes-v5';
-const ARQUIVOS = ['./', 'index.html', 'styles.css', 'app.js', 'servidor.js', 'config.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'immb-reunioes-v6';
+const ARQUIVOS = ['./', 'index.html', 'styles.css', 'app.js', 'servidor.js', 'config.js', 'manifest.json', 'logo.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)));

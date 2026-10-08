@@ -736,8 +736,13 @@ $('#imprimir-relatorio').addEventListener('click', () => {
     : escopo === 'unidade' ? nomeUnidade(s.perfil.unidadeId)
       : ($('#filtro-unidade').value ? nomeUnidade($('#filtro-unidade').value) : 'Todas as unidades');
   $('#impressao').innerHTML = `
-    <h1>Reuniões no Lar</h1>
-    <p>Igreja Messiânica Mundial do Brasil · ${esc(unidade)}<br>Período: ${esc(descricaoPeriodo())}</p>
+    <header class="cabecalho">
+      <img src="logo.png" alt="" width="64" height="64">
+      <div>
+        <h1>Reuniões no Lar</h1>
+        <p>Igreja Messiânica Mundial do Brasil · ${esc(unidade)}<br>Período: ${esc(descricaoPeriodo())}</p>
+      </div>
+    </header>
     <table>
       <tr><th>Reuniões</th><th>Participantes</th><th>Johrei Membros</th><th>Johrei Frequentadores</th><th>Johrei 1ª vez</th><th>Total de Johreis</th></tr>
       <tr><td>${t.reunioes}</td><td>${t.participantes}</td><td>${t.johreiMembros}</td><td>${t.johreiFrequentadores}</td><td>${t.johreiPrimeiraVez}</td><td>${t.johreiTotal}</td></tr>

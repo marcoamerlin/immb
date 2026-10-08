@@ -1,7 +1,8 @@
 :root {
-  --azul: #1f5c99;
-  --azul-escuro: #17487a;
-  --azul-claro: #e8f0f8;
+  /* Cor principal: verde do logo da IMMB (as variáveis mantêm o nome antigo "azul"). */
+  --azul: #007a40;
+  --azul-escuro: #005c30;
+  --azul-claro: #e3f3ea;
   --texto: #1d2733;
   --suave: #5f6b7a;
   --borda: #d6dde6;
@@ -16,9 +17,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --azul: #7fb1e6;
-    --azul-escuro: #a9cbf0;
-    --azul-claro: #1c2c3d;
+    --azul: #5cc98d;
+    --azul-escuro: #8fdcb1;
+    --azul-claro: #13291d;
     --texto: #e6ebf1;
     --suave: #9aa6b4;
     --borda: #334155;
@@ -46,6 +47,8 @@ p { margin: 0 0 12px; }
 .tela.centro { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 8px; }
 .cartao { width: 100%; max-width: 400px; background: var(--painel); border: 1px solid var(--borda); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .cartao img { align-self: center; }
+.logo { border-radius: 12px; object-fit: cover; }
+.brand .logo { border-radius: 8px; }
 .cartao h1, .cartao > .hint:first-of-type { text-align: center; margin: 0; }
 .links-login { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .sucesso { background: var(--azul-claro); border-radius: 8px; padding: 12px; }
@@ -201,6 +204,9 @@ label input, label select { color: var(--texto); font-size: 1rem; width: 100%; }
   #impressao tr { break-inside: avoid; }
   .aviso-demo, .tela, #app, #toast { display: none !important; }
   #impressao { display: block; font-size: 10pt; }
+  #impressao .cabecalho { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  #impressao .cabecalho img { border-radius: 6px; }
+  #impressao .cabecalho p { margin: 0; }
   #impressao h1 { font-size: 16pt; margin: 0 0 4px; }
   #impressao h2 { font-size: 12pt; margin: 16px 0 6px; }
   #impressao table { width: 100%; border-collapse: collapse; }
